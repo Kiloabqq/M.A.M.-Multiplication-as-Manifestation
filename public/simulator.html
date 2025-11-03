@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>M.A.M. Simulator</title>
+  <style>
+    body { font-family: sans-serif; padding: 2em; }
+    input, select { margin: 0.5em; }
+  </style>
+</head>
+<body>
+  <h1>M.A.M. Logic Simulator</h1>
+  <form id="simForm">
+    <input type="number" id="a" placeholder="a" required />
+    <input type="number" id="b" placeholder="b" required />
+    <select id="mode">
+      <option value="standard">standard</option>
+      <option value="catalytic">catalytic</option>
+      <option value="null">null</option>
+      <option value="unit_amplify">unit_amplify</option>
+      <option value="doubling_symmetry">doubling_symmetry</option>
+      <option value="non_commutative">non_commutative</option>
+    </select>
+    <button type="submit">Run</button>
+  </form>
+  <pre id="output"></pre>
+
+  <script>
+    document.getElementById('simForm').onsubmit = async (e) => {
+      e.preventDefault();
+      const a = parseFloat(document.getElementById('a').value);
+      const b = parseFloat(document.getElementById('b').value);
+      const mode = document.getElementById('mode').value;
+
+      const res = await fetch('/mam/multiply', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ a, b, mode, metadata: { intent: 'simulation' } })
+      });
+
+      const data = await res.json();
+      document.getElementById('output').textContent = JSON.stringify(data, null, 2);
+    };
+  </script>
+</body>
+</html>
