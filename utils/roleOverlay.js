@@ -1,14 +1,35 @@
 function applyOverlay(role, payload) {
+  const trace = payload.agentTrace || [];
+  let updated = { ...payload };
+
   switch (role) {
     case 'catalyst':
-      return { ...payload, a: payload.a + 1, metadata: { ...payload.metadata, role: 'catalyst' } };
+      updated.a += 1;
+      break;
     case 'potential':
-      return { ...payload, b: payload.b * 2, metadata: { ...payload.metadata, role: 'potential' } };
+      updated.b *= 2;
+      break;
     case 'null':
-      return { ...payload, a: 0, b: 0, metadata: { ...payload.metadata, role: 'null' } };
+      updated.a = 0;
+      updated.b = 0;
+      break;
+    case 'observer':
+      updated.metadata.observed = true;
+      break;
+    case 'filter':
+      if (updated.a < 0 || updated.b < 0) throw new Error('Filtered: negative input');
+      break;
+    case 'amplifier':
+      updated.a *= 10;
+      updated.b *= 10;
+      break;
     default:
-      return { ...payload, metadata: { ...payload.metadata, role: 'standard' } };
+      break;
   }
+
+  updated.metadata = { ...updated.metadata, role };
+  updated.agentTrace = [...trace, { role, result: { a: updated.a, b: updated.b } }];
+  return updated;
 }
 
 module.exports = { applyOverlay };
