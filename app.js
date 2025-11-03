@@ -1,13 +1,27 @@
 const express = require('express');
-const app = express();
-const multiplyRoute = require('./routes/multiply');
-app.use('/mam/multiply', multiplyRoute);
-app.use(express.json());
-app.use(express.static('public'));
+const path = require('path');
 
+const app = express();
+
+// Middleware
+app.use(express.json());
+app.use(express.static(path.join(__dirname, 'public')));
+
+// Routes
+const multiplyRoute = require('./routes/multiply');
+const debugRoute = require('./routes/debug');
+
+app.use('/mam/multiply', multiplyRoute);
+app.use('/mam/debug', debugRoute);
+
+// Health check
 app.get('/health', (req, res) => res.status(200).send('OK'));
 
+// Optional: redirect root to simulator
+app.get('/', (req, res) => res.redirect('/simulator.html'));
 
+// Start server
 const PORT = process.env.PORT || 3000;
-
-app.listen(PORT, () => console.log(`M.A.M. API running on ${PORT}`));
+app.listen(PORT, () => {
+  console.log(`🚀 M.A.M. API live on port ${PORT}`);
+});
