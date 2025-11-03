@@ -4,19 +4,95 @@
   <meta charset="UTF-8" />
   <title>M.A.M. Chain Simulator</title>
   <style>
-    body { font-family: sans-serif; padding: 2em; }
-    input, textarea { margin: 0.5em; width: 100%; }
-    pre { background: #f4f4f4; padding: 1em; }
+    body {
+      margin: 0;
+      font-family: 'Orbitron', sans-serif;
+      background-image: url('https://copilot.microsoft.com/th/id/BCO.a20efc21-7a1b-48f4-87a3-144ab24fbe28.png');
+      background-size: cover;
+      background-position: center;
+      color: #00ffff;
+      padding: 2em;
+    }
+
+    h1 {
+      font-size: 2.5em;
+      font-weight: bold;
+      text-align: center;
+      margin-bottom: 1em;
+      text-shadow: 0 0 10px #00ffff;
+    }
+
+    form {
+      background: rgba(0, 0, 0, 0.7);
+      padding: 1em;
+      border-radius: 10px;
+      max-width: 600px;
+      margin: auto;
+    }
+
+    textarea, input, select, button {
+      width: 100%;
+      margin: 0.5em 0;
+      padding: 0.8em;
+      border-radius: 6px;
+      border: none;
+      font-size: 1em;
+      background: #001f1f;
+      color: #00ffff;
+    }
+
+    button {
+      background: #00ffff;
+      color: #001f1f;
+      font-weight: bold;
+      cursor: pointer;
+      transition: background 0.3s ease;
+    }
+
+    button:hover {
+      background: #00cccc;
+    }
+
+    table {
+      width: 100%;
+      margin-top: 2em;
+      border-collapse: collapse;
+      background: rgba(0, 0, 0, 0.8);
+    }
+
+    th, td {
+      border: 1px solid #00ffff;
+      padding: 0.5em;
+      text-align: center;
+    }
+
+    th {
+      background: #002f2f;
+      font-weight: bold;
+    }
+
+    #output {
+      white-space: pre-wrap;
+      margin-top: 2em;
+      background: rgba(0, 0, 0, 0.6);
+      padding: 1em;
+      border-radius: 10px;
+    }
   </style>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&display=swap" rel="stylesheet">
 </head>
 <body>
-  <h1>Chain Simulator</h1>
+  <h1>M.A.M. CHAIN SIMULATOR</h1>
   <form id="chainForm">
     <textarea id="prompt" rows="3" placeholder="Enter prompt..."></textarea>
     <input type="number" id="a" placeholder="a" value="1" />
     <input type="number" id="b" placeholder="b" value="1" />
     <button type="submit">Run Chain</button>
   </form>
+
+  <div id="traceTable"></div>
+  <button onclick="exportCSV()">Export Trace to CSV</button>
+
   <pre id="output"></pre>
 
   <script>
@@ -34,7 +110,30 @@
 
       const data = await res.json();
       document.getElementById('output').textContent = JSON.stringify(data, null, 2);
+      renderTrace(data.agentTrace);
+      window.traceData = data.agentTrace;
     };
-  </script>
-</body>
-</html>
+
+    function renderTrace(trace) {
+      if (!trace || !trace.length) return;
+
+      let html = `<table><tr><th>Step</th><th>Role</th><th>Modifications</th><th>Output</th></tr>`;
+      trace.forEach((step, i) => {
+        const mods = Object.entries(step.result).map(([k, v]) => `${k} = ${v}`).join(', ');
+        html += `<tr><td>${i + 1}</td><td>${step.role}</td><td>${step.role} overlay</td><td>${mods}</td></tr>`;
+      });
+      html += `</table>`;
+      document.getElementById('traceTable').innerHTML = html;
+    }
+
+    function exportCSV() {
+      if (!window.traceData) return;
+      const rows = [['Step', 'Role', 'Modifications', 'Output']];
+      window.traceData.forEach((step, i) => {
+        const mods = Object.entries(step.result).map(([k, v]) => `${k} = ${v}`).join(', ');
+        rows.push([i + 1, step.role, `${step.role} overlay`, mods]);
+      });
+
+      const csv = rows.map(r => r.join(',')).join('\n');
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = URL
