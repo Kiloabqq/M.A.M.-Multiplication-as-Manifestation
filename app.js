@@ -11,7 +11,9 @@ app.use(express.static(path.join(__dirname, 'public')));
 const multiplyRoute = require('./routes/multiply');
 const debugRoute = require('./routes/debug');
 const interpretRoute = require('./routes/interpret');
+const chainRoute = require('./routes/chain');
 
+app.use('/mam/chain', chainRoute);
 app.use('/mam/interpret', interpretRoute);
 app.use('/mam/multiply', multiplyRoute);
 app.use('/mam/debug', debugRoute);
@@ -27,4 +29,5 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`🚀 M.A.M. API live on port ${PORT}`);
 });
+
 
