@@ -30,4 +30,6 @@ function chainHandler(req, res) {
   }
 }
 
-module.exports = { chainHandler };
+module.exports = {
+  chainHandler
+};
