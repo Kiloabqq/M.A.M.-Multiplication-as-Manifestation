@@ -10,8 +10,8 @@
       background-image: url('https://freeimage.host/i/KQdjPMg');
       background-size: cover;
       background-position: center;
-      color: #00ffff;
-      padding: 2em;
+      background-repeat: no-repeat;
+      background-color: #000; /* fallback */
     }
 
     h1 {
@@ -137,6 +137,7 @@
       const csv = rows.map(r => r.join(',')).join('\n');
       const blob = new Blob([csv], { type: 'text/csv' });
       const url = URL
+
 
 
 
