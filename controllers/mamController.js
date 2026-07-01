@@ -1,79 +1,222 @@
-const { multiply } = require('../utils/mamLogic');
-const { applyOverlay } = require('../utils/roleOverlay');
-const { interpretPrompt } = require('../utils/promptInterpreter');
+const { multiply, VALID_MODES } = require("../utils/mamLogic");
+const { applyOverlay } = require("../utils/roleOverlay");
+const {
+  interpretPrompt,
+  SUPPORTED_MODE_KEYWORDS,
+  SUPPORTED_ROLE_KEYWORDS,
+} = require("../utils/promptInterpreter");
 
-// ─── Multiply Handler ─────────────────────────────────────────
+function badRequest(message) {
+  const error = new Error(message);
+  error.statusCode = 400;
+  return error;
+}
+
+function normalizeMetadata(metadata) {
+  if (metadata === undefined) {
+    return {};
+  }
+
+  if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) {
+    throw badRequest("metadata must be an object when provided.");
+  }
+
+  return metadata;
+}
+
+function normalizeRole(role) {
+  if (typeof role !== "string" || role.trim() === "") {
+    return "standard";
+  }
+
+  return role.trim().toLowerCase();
+}
+
+function normalizeMode(mode) {
+  if (mode === undefined) {
+    return "standard";
+  }
+
+  if (typeof mode !== "string" || !VALID_MODES.includes(mode)) {
+    throw badRequest(
+      `Unknown mode: ${mode}. Supported modes: ${VALID_MODES.join(", ")}.`,
+    );
+  }
+
+  return mode;
+}
+
+function parseNumber(value, name) {
+  if (
+    typeof value !== "number" ||
+    Number.isNaN(value) ||
+    !Number.isFinite(value)
+  ) {
+    throw badRequest(`${name} must be a finite number.`);
+  }
+
+  return value;
+}
+
+function parsePrompt(prompt) {
+  if (typeof prompt !== "string" || prompt.trim() === "") {
+    throw badRequest("prompt is required and must be a non-empty string.");
+  }
+
+  return prompt.trim();
+}
+
+function buildNumericPayload(body = {}) {
+  return {
+    a: parseNumber(body.a, "a"),
+    b: parseNumber(body.b, "b"),
+    mode: normalizeMode(body.mode),
+    metadata: normalizeMetadata(body.metadata),
+    role: normalizeRole(body.role),
+  };
+}
+
+function createBasePayload({ a, b, mode, metadata }) {
+  return {
+    a,
+    b,
+    mode,
+    metadata: { ...metadata },
+    agentTrace: [],
+  };
+}
+
+function sendError(res, error) {
+  const statusCode = error.statusCode || 500;
+  const message = statusCode === 500 ? "Internal server error." : error.message;
+
+  if (statusCode === 500) {
+    console.error(error);
+  }
+
+  res.status(statusCode).json({ error: message });
+}
+
 function multiplyHandler(req, res) {
-  const { a, b, mode = 'standard', metadata = {}, role = 'standard' } = req.body;
-  console.log('MULTIPLY payload:', { a, b, mode, metadata, role });
-
   try {
-    const adjusted = applyOverlay(role, { a, b, mode, metadata });
-    const result = multiply(adjusted.a, adjusted.b, adjusted.mode, adjusted.metadata);
+    const { a, b, mode, metadata, role } = buildNumericPayload(req.body);
+    const adjusted = applyOverlay(
+      role,
+      createBasePayload({ a, b, mode, metadata }),
+    );
+    const result = multiply(
+      adjusted.a,
+      adjusted.b,
+      adjusted.mode,
+      adjusted.metadata,
+    );
+
     res.status(200).json({
+      operator: "symbolic_composition",
+      mode: adjusted.mode,
+      role,
       result,
-      role: adjusted.metadata.role,
-      metadata: adjusted.metadata
+      metadata: adjusted.metadata,
+      agentTrace: adjusted.agentTrace,
     });
-  } catch (err) {
-    console.error('MULTIPLY error:', err);
-    res.status(500).json({ error: err.message });
+  } catch (error) {
+    sendError(res, error);
   }
 }
 
-// ─── Debug Handler ────────────────────────────────────────────
 function debugHandler(req, res) {
-  const { a, b, mode = 'standard', metadata = {}, role = 'standard' } = req.body;
-  console.log('DEBUG payload:', { a, b, mode, metadata, role });
-
   try {
-    const adjusted = applyOverlay(role, { a, b, mode, metadata });
-    const result = multiply(adjusted.a, adjusted.b, adjusted.mode, adjusted.metadata);
+    const { a, b, mode, metadata, role } = buildNumericPayload(req.body);
+    const adjusted = applyOverlay(
+      role,
+      createBasePayload({ a, b, mode, metadata }),
+    );
+    const result = multiply(
+      adjusted.a,
+      adjusted.b,
+      adjusted.mode,
+      adjusted.metadata,
+    );
+
     res.status(200).json({
+      operator: "symbolic_composition",
       input: { a, b, mode, metadata, role },
       adjusted,
-      agentTrace: adjusted.agentTrace,
       result,
-      timestamp: new Date().toISOString()
+      supportedModes: VALID_MODES,
+      timestamp: new Date().toISOString(),
     });
-  } catch (err) {
-    console.error('DEBUG error:', err);
-    res.status(500).json({ error: err.message });
+  } catch (error) {
+    sendError(res, error);
   }
 }
 
-// ─── Chain Handler ────────────────────────────────────────────
-function chainHandler(req, res) {
-  const { prompt, a = 1, b = 1 } = req.body;
-  console.log('CHAIN prompt:', prompt);
-
+function interpretHandler(req, res) {
   try {
-    const { roles, mode } = interpretPrompt(prompt);
-    let payload = { a, b, mode, metadata: { intent: 'chained' }, agentTrace: [] };
+    const prompt = parsePrompt(req.body && req.body.prompt);
+    const interpretation = interpretPrompt(prompt);
 
-    for (const role of roles) {
+    res.status(200).json({
+      prompt,
+      ...interpretation,
+      supportedKeywords: {
+        roles: SUPPORTED_ROLE_KEYWORDS,
+        modes: SUPPORTED_MODE_KEYWORDS,
+      },
+    });
+  } catch (error) {
+    sendError(res, error);
+  }
+}
+
+function chainHandler(req, res) {
+  try {
+    const prompt = parsePrompt(req.body && req.body.prompt);
+    const a = parseNumber(req.body && req.body.a, "a");
+    const b = parseNumber(req.body && req.body.b, "b");
+    const metadata = normalizeMetadata(req.body && req.body.metadata);
+    const interpretation = interpretPrompt(prompt);
+
+    let payload = createBasePayload({
+      a,
+      b,
+      mode: interpretation.mode,
+      metadata: {
+        ...metadata,
+        intent: "chain",
+        prompt,
+      },
+    });
+
+    for (const role of interpretation.roles) {
       payload = applyOverlay(role, payload);
     }
 
-    const result = multiply(payload.a, payload.b, payload.mode, payload.metadata);
+    const result = multiply(
+      payload.a,
+      payload.b,
+      payload.mode,
+      payload.metadata,
+    );
+
     res.status(200).json({
+      operator: "symbolic_composition",
       prompt,
-      roles,
-      mode,
+      roles: interpretation.roles,
+      mode: interpretation.mode,
       agentTrace: payload.agentTrace,
       finalPayload: payload,
       result,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     });
-  } catch (err) {
-    console.error('CHAIN error:', err);
-    res.status(500).json({ error: err.message });
+  } catch (error) {
+    sendError(res, error);
   }
 }
 
-// ─── Export Handlers ──────────────────────────────────────────
 module.exports = {
-  multiplyHandler,
+  chainHandler,
   debugHandler,
-  chainHandler
+  interpretHandler,
+  multiplyHandler,
 };

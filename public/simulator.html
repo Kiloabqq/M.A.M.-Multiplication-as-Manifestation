@@ -1,143 +1,254 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <title>M.A.M. Chain Simulator</title>
-  <style>
-    body {
-      margin: 0;
-      font-family: 'Orbitron', sans-serif;
-      background-image: url('https://freeimage.host/i/KQdjPMg');
-      background-size: cover;
-      background-position: center;
-      background-repeat: no-repeat;
-      background-color: #000; /* fallback */
-    }
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>M.A.M. Simulator</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #06131a;
+        --panel: rgba(9, 22, 30, 0.92);
+        --panel-border: rgba(126, 233, 216, 0.22);
+        --text: #e8f5f2;
+        --muted: #9db9b1;
+        --accent: #7ee9d8;
+        --accent-strong: #3ccfba;
+        --code-bg: #041017;
+      }
 
-    h1 {
-      font-size: 2.5em;
-      font-weight: bold;
-      text-align: center;
-      margin-bottom: 1em;
-      text-shadow: 0 0 10px #00ffff;
-    }
+      * {
+        box-sizing: border-box;
+      }
 
-    form {
-      background: rgba(0, 0, 0, 0.7);
-      padding: 1em;
-      border-radius: 10px;
-      max-width: 600px;
-      margin: auto;
-    }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        background:
+          radial-gradient(
+            circle at top,
+            rgba(60, 207, 186, 0.18),
+            transparent 30%
+          ),
+          linear-gradient(180deg, #041017 0%, #06131a 55%, #081c25 100%);
+        color: var(--text);
+      }
 
-    textarea, input, select, button {
-      width: 100%;
-      margin: 0.5em 0;
-      padding: 0.8em;
-      border-radius: 6px;
-      border: none;
-      font-size: 1em;
-      background: #001f1f;
-      color: #00ffff;
-    }
+      main {
+        max-width: 920px;
+        margin: 0 auto;
+        padding: 48px 20px 64px;
+      }
 
-    button {
-      background: #00ffff;
-      color: #001f1f;
-      font-weight: bold;
-      cursor: pointer;
-      transition: background 0.3s ease;
-    }
+      .panel {
+        background: var(--panel);
+        border: 1px solid var(--panel-border);
+        border-radius: 18px;
+        padding: 24px;
+        box-shadow: 0 18px 50px rgba(0, 0, 0, 0.28);
+        backdrop-filter: blur(10px);
+      }
 
-    button:hover {
-      background: #00cccc;
-    }
+      h1 {
+        margin: 0 0 12px;
+        font-size: clamp(2rem, 4vw, 3.2rem);
+        letter-spacing: 0.06em;
+      }
 
-    table {
-      width: 100%;
-      margin-top: 2em;
-      border-collapse: collapse;
-      background: rgba(0, 0, 0, 0.8);
-    }
+      p {
+        margin: 0 0 18px;
+        color: var(--muted);
+        line-height: 1.6;
+      }
 
-    th, td {
-      border: 1px solid #00ffff;
-      padding: 0.5em;
-      text-align: center;
-    }
+      .grid {
+        display: grid;
+        gap: 16px;
+      }
 
-    th {
-      background: #002f2f;
-      font-weight: bold;
-    }
+      @media (min-width: 720px) {
+        .grid {
+          grid-template-columns: 2fr 1fr 1fr;
+        }
+      }
 
-    #output {
-      white-space: pre-wrap;
-      margin-top: 2em;
-      background: rgba(0, 0, 0, 0.6);
-      padding: 1em;
-      border-radius: 10px;
-    }
-  </style>
-  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&display=swap" rel="stylesheet">
-</head>
-<body>
-  <h1>M.A.M. CHAIN SIMULATOR</h1>
-  <form id="chainForm">
-    <textarea id="prompt" rows="3" placeholder="Enter prompt..."></textarea>
-    <input type="number" id="a" placeholder="a" value="1" />
-    <input type="number" id="b" placeholder="b" value="1" />
-    <button type="submit">Run Chain</button>
-  </form>
+      label {
+        display: block;
+        font-size: 0.95rem;
+        font-weight: 600;
+        margin-bottom: 8px;
+      }
 
-  <div id="traceTable"></div>
-  <button onclick="exportCSV()">Export Trace to CSV</button>
+      input,
+      textarea,
+      select,
+      button {
+        width: 100%;
+        border-radius: 12px;
+        border: 1px solid rgba(126, 233, 216, 0.2);
+        background: rgba(3, 14, 20, 0.9);
+        color: var(--text);
+        font: inherit;
+      }
 
-  <pre id="output"></pre>
+      input,
+      textarea,
+      select {
+        padding: 12px 14px;
+      }
 
-  <script>
-    document.getElementById('chainForm').onsubmit = async (e) => {
-      e.preventDefault();
-      const prompt = document.getElementById('prompt').value;
-      const a = parseFloat(document.getElementById('a').value);
-      const b = parseFloat(document.getElementById('b').value);
+      textarea {
+        min-height: 120px;
+        resize: vertical;
+      }
 
-      const res = await fetch('/mam/chain', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt, a, b })
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-top: 20px;
+      }
+
+      button {
+        width: auto;
+        min-width: 180px;
+        padding: 12px 18px;
+        background: linear-gradient(
+          135deg,
+          var(--accent),
+          var(--accent-strong)
+        );
+        color: #042028;
+        font-weight: 700;
+        cursor: pointer;
+        transition:
+          transform 0.16s ease,
+          box-shadow 0.16s ease;
+      }
+
+      button:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 10px 24px rgba(60, 207, 186, 0.25);
+      }
+
+      pre {
+        margin: 24px 0 0;
+        padding: 18px;
+        background: var(--code-bg);
+        border: 1px solid rgba(126, 233, 216, 0.18);
+        border-radius: 14px;
+        overflow: auto;
+        white-space: pre-wrap;
+        word-break: break-word;
+        line-height: 1.5;
+      }
+
+      .note {
+        margin-top: 16px;
+        padding: 14px 16px;
+        border-left: 4px solid var(--accent);
+        background: rgba(10, 30, 38, 0.72);
+        border-radius: 12px;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <section class="panel">
+        <h1>M.A.M. Simulator</h1>
+        <p>
+          KiLo / AISKI composition lab. M.A.M. treats <strong>⊗</strong> as a
+          symbolic composition operator for agent and role interaction. It does
+          not replace arithmetic multiplication.
+        </p>
+
+        <div class="grid">
+          <div>
+            <label for="prompt">Prompt</label>
+            <textarea
+              id="prompt"
+              placeholder="Example: catalyst amplify then apply non-commutative composition"
+            ></textarea>
+          </div>
+          <div>
+            <label for="a">Operand a</label>
+            <input id="a" type="number" value="1" />
+          </div>
+          <div>
+            <label for="b">Operand b</label>
+            <input id="b" type="number" value="1" />
+          </div>
+        </div>
+
+        <div class="actions">
+          <button id="runChain" type="button">POST /mam/chain</button>
+          <button id="runMultiply" type="button">POST /mam/multiply</button>
+        </div>
+
+        <div class="note">
+          <strong>Default multiply mode:</strong> standard symbolic composition.
+          Use the prompt to experiment with role and mode detection through
+          <code>/mam/chain</code>.
+        </div>
+
+        <pre id="response">Run a request to inspect the JSON response.</pre>
+      </section>
+    </main>
+
+    <script>
+      const responseBox = document.getElementById("response");
+
+      function getPayload() {
+        return {
+          prompt: document.getElementById("prompt").value,
+          a: Number(document.getElementById("a").value),
+          b: Number(document.getElementById("b").value),
+        };
+      }
+
+      async function sendRequest(endpoint, body) {
+        responseBox.textContent = "Loading...";
+
+        try {
+          const response = await fetch(endpoint, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(body),
+          });
+
+          const data = await response.json();
+          responseBox.textContent = JSON.stringify(data, null, 2);
+        } catch (error) {
+          responseBox.textContent = JSON.stringify(
+            {
+              error: error.message,
+            },
+            null,
+            2,
+          );
+        }
+      }
+
+      document.getElementById("runChain").addEventListener("click", () => {
+        sendRequest("/mam/chain", getPayload());
       });
 
-      const data = await res.json();
-      document.getElementById('output').textContent = JSON.stringify(data, null, 2);
-      renderTrace(data.agentTrace);
-      window.traceData = data.agentTrace;
-    };
+      document.getElementById("runMultiply").addEventListener("click", () => {
+        const { a, b } = getPayload();
 
-    function renderTrace(trace) {
-      if (!trace || !trace.length) return;
-
-      let html = `<table><tr><th>Step</th><th>Role</th><th>Modifications</th><th>Output</th></tr>`;
-      trace.forEach((step, i) => {
-        const mods = Object.entries(step.result).map(([k, v]) => `${k} = ${v}`).join(', ');
-        html += `<tr><td>${i + 1}</td><td>${step.role}</td><td>${step.role} overlay</td><td>${mods}</td></tr>`;
+        sendRequest("/mam/multiply", {
+          a,
+          b,
+          mode: "standard",
+          role: "standard",
+          metadata: {
+            source: "simulator",
+          },
+        });
       });
-      html += `</table>`;
-      document.getElementById('traceTable').innerHTML = html;
-    }
-
-    function exportCSV() {
-      if (!window.traceData) return;
-      const rows = [['Step', 'Role', 'Modifications', 'Output']];
-      window.traceData.forEach((step, i) => {
-        const mods = Object.entries(step.result).map(([k, v]) => `${k} = ${v}`).join(', ');
-        rows.push([i + 1, step.role, `${step.role} overlay`, mods]);
-      });
-
-      const csv = rows.map(r => r.join(',')).join('\n');
-      const blob = new Blob([csv], { type: 'text/csv' });
-      const url = URL
-
-
-
-
+    </script>
+  </body>
+</html>
